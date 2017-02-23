@@ -45,6 +45,9 @@ func NewContext(bufferSize int) (*Context, error) {
 // Run runs f in the Context asynchronously and returns
 // a channel that will be sent the result of f.
 //
+// If you are not interested in the result of f, you can
+// simply ignore the returned channel.
+//
 // While f is running, no other function can run on the
 // Context.
 // This means that, to avoid deadlock, f should not use
