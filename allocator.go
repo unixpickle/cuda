@@ -65,7 +65,7 @@ func (n *nativeAllocator) Context() *Context {
 
 func (n *nativeAllocator) Alloc(size C.size_t) (unsafe.Pointer, error) {
 	var ptr unsafe.Pointer
-	return ptr, NewErrorRuntime("cudaMalloc", C.cudaMalloc(&ptr, size))
+	return ptr, newErrorRuntime("cudaMalloc", C.cudaMalloc(&ptr, size))
 }
 
 func (n *nativeAllocator) Free(ptr unsafe.Pointer, size C.size_t) {

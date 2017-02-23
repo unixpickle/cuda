@@ -32,7 +32,7 @@ func NewContext(bufferSize int) (*Context, error) {
 	go contextLoop(msgs)
 	res := &Context{msgs: msgs}
 	err := <-res.Run(func() error {
-		return NewErrorDriver("cuInit", C.cuInit(0))
+		return newErrorDriver("cuInit", C.cuInit(0))
 	})
 	if err != nil {
 		close(msgs)

@@ -158,38 +158,38 @@ type Error struct {
 	Message string
 }
 
-// NewErrorDriver creates an Error from the result of a
+// newErrorDriver creates an Error from the result of a
 // CUDA driver API call.
 //
 // If e is CUDA_SUCCESS, nil is returned.
-func NewErrorDriver(context string, e C.CUresult) *Error {
+func newErrorDriver(context string, e C.CUresult) *Error {
 	return newErrorCStr(context, C.go_cuda_cu_err(e))
 }
 
-// NewErrorRuntime creates an Error from the result of a
+// newErrorRuntime creates an Error from the result of a
 // CUDA runtime API call.
 //
 // If e is cudaSuccess, nil is returned.
-func NewErrorRuntime(context string, e C.cudaError_t) *Error {
+func newErrorRuntime(context string, e C.cudaError_t) *Error {
 	if e == C.cudaSuccess {
 		return nil
 	}
 	return newErrorCStr(context, C.cudaGetErrorString(e))
 }
 
-// NewErrorBLAS creates an Error from the result of a
+// newErrorBLAS creates an Error from the result of a
 // cuBLAS API call.
 //
 // If e is CUBLAS_STATUS_SUCCESS, nil is returned.
-func NewErrorBLAS(context string, e C.cublasStatus_t) *Error {
+func newErrorBLAS(context string, e C.cublasStatus_t) *Error {
 	return newErrorCStr(context, C.go_cuda_cublas_err(e))
 }
 
-// NewErrorRAND creates an Error from the result of a
+// newErrorRAND creates an Error from the result of a
 // cuRAND API call.
 //
 // If e is CURAND_STATUS_SUCCESS, nil is returned.
-func NewErrorRAND(context string, e C.curandStatus_t) *Error {
+func newErrorRAND(context string, e C.curandStatus_t) *Error {
 	return newErrorCStr(context, C.go_cuda_curand_err(e))
 }
 
