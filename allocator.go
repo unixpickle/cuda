@@ -34,7 +34,7 @@ type Allocator interface {
 	// Allocate a chunk of CUDA memory.
 	//
 	// This should only be called from the Context.
-	Alloc(size C.size_t) (unsafe.Pointer, error)
+	Alloc(size uintptr) (unsafe.Pointer, error)
 
 	// Free a chunk of CUDA memory.
 	//
@@ -42,7 +42,7 @@ type Allocator interface {
 	// passed to Alloc().
 	//
 	// This should only be called from the Context.
-	Free(ptr unsafe.Pointer, size C.size_t)
+	Free(ptr unsafe.Pointer, size uintptr)
 }
 
 // A nativeAllocator allocates directly using CUDA.
@@ -63,20 +63,20 @@ func (n *nativeAllocator) Context() *Context {
 	return n.ctx
 }
 
-func (n *nativeAllocator) Alloc(size C.size_t) (unsafe.Pointer, error) {
+func (n *nativeAllocator) Alloc(size uintptr) (unsafe.Pointer, error) {
 	var ptr unsafe.Pointer
-	return ptr, newErrorRuntime("cudaMalloc", C.cudaMalloc(&ptr, size))
+	return ptr, newErrorRuntime("cudaMalloc", C.cudaMalloc(&ptr, C.size_t(size)))
 }
 
-func (n *nativeAllocator) Free(ptr unsafe.Pointer, size C.size_t) {
+func (n *nativeAllocator) Free(ptr unsafe.Pointer, size uintptr) {
 	C.cudaFree(ptr)
 }
 
 type gcAllocator struct {
 	Allocator
 
-	inUse  C.size_t
-	thresh C.size_t
+	inUse  uintptr
+	thresh uintptr
 	ratio  float64
 }
 
@@ -114,7 +114,7 @@ func GCAllocator(a Allocator, frac float64) Allocator {
 	}
 }
 
-func (g *gcAllocator) Alloc(size C.size_t) (unsafe.Pointer, error) {
+func (g *gcAllocator) Alloc(size uintptr) (unsafe.Pointer, error) {
 	res, err := g.Allocator.Alloc(size)
 	if err != nil {
 		return res, err
@@ -127,7 +127,7 @@ func (g *gcAllocator) Alloc(size C.size_t) (unsafe.Pointer, error) {
 	return res, nil
 }
 
-func (g *gcAllocator) Free(ptr unsafe.Pointer, size C.size_t) {
+func (g *gcAllocator) Free(ptr unsafe.Pointer, size uintptr) {
 	g.Allocator.Free(ptr, size)
 	g.inUse -= size
 	if g.inUse < 0 {
@@ -139,8 +139,15 @@ func (g *gcAllocator) Free(ptr unsafe.Pointer, size C.size_t) {
 	}
 }
 
-func (g *gcAllocator) updatedThresh() C.size_t {
-	res := C.size_t(float64(g.inUse) * g.ratio)
+func (g *gcAllocator) updatedThresh() uintptr {
+	newVal := float64(g.inUse) * g.ratio
+
+	// Only matters on 32-bit systems.
+	if newVal > float64(^uintptr(0)) {
+		return ^uintptr(0)
+	}
+
+	res := uintptr(newVal)
 	if res > minGCThresh {
 		return res
 	} else {
