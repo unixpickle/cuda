@@ -162,7 +162,7 @@ type Error struct {
 // CUDA driver API call.
 //
 // If e is CUDA_SUCCESS, nil is returned.
-func newErrorDriver(context string, e C.CUresult) *Error {
+func newErrorDriver(context string, e C.CUresult) error {
 	return newErrorCStr(context, C.go_cuda_cu_err(e))
 }
 
@@ -170,7 +170,7 @@ func newErrorDriver(context string, e C.CUresult) *Error {
 // CUDA runtime API call.
 //
 // If e is cudaSuccess, nil is returned.
-func newErrorRuntime(context string, e C.cudaError_t) *Error {
+func newErrorRuntime(context string, e C.cudaError_t) error {
 	if e == C.cudaSuccess {
 		return nil
 	}
@@ -181,7 +181,7 @@ func newErrorRuntime(context string, e C.cudaError_t) *Error {
 // cuBLAS API call.
 //
 // If e is CUBLAS_STATUS_SUCCESS, nil is returned.
-func newErrorBLAS(context string, e C.cublasStatus_t) *Error {
+func newErrorBLAS(context string, e C.cublasStatus_t) error {
 	return newErrorCStr(context, C.go_cuda_cublas_err(e))
 }
 
@@ -189,11 +189,11 @@ func newErrorBLAS(context string, e C.cublasStatus_t) *Error {
 // cuRAND API call.
 //
 // If e is CURAND_STATUS_SUCCESS, nil is returned.
-func newErrorRAND(context string, e C.curandStatus_t) *Error {
+func newErrorRAND(context string, e C.curandStatus_t) error {
 	return newErrorCStr(context, C.go_cuda_curand_err(e))
 }
 
-func newErrorCStr(context string, cstr *C.char) *Error {
+func newErrorCStr(context string, cstr *C.char) error {
 	if cstr == C.nullMessage {
 		return nil
 	}
