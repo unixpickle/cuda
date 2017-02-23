@@ -48,24 +48,28 @@ const (
 
 // A Generator generates random numbers.
 type Generator struct {
+	ctx *cuda.Context
 	gen C.curandGenerator_t
 }
 
 // NewGenerator creates a Generator for the given type.
 //
-// This must be called inside a cuda.Context.
-func NewGenerator(t Type) (*Generator, error) {
+// This must be called inside the cuda.Context.
+func NewGenerator(c *cuda.Context, t Type) (*Generator, error) {
 	if t > QuasiScrambledSobol64 || t < 0 {
 		panic("type out of bounds")
 	}
 	realType := C.go_curand_rng_type(C.int(t))
-	res := &Generator{}
+	res := &Generator{ctx: c}
 	code := C.curandCreateGenerator(&res.gen, realType)
 	if err := newError("curandCreateGenerator", code); err != nil {
 		return nil, err
 	}
 	runtime.SetFinalizer(res, func(g *Generator) {
-		C.curandDestroyGenerator(g.gen)
+		go g.ctx.Run(func() error {
+			C.curandDestroyGenerator(g.gen)
+			return nil
+		})
 	})
 	return res, nil
 }

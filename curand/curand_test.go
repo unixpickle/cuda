@@ -26,7 +26,7 @@ func TestGeneratorPseudo(t *testing.T) {
 				resErr = err.(error)
 			}
 		}()
-		gen, err := NewGenerator(PseudoDefault)
+		gen, err := NewGenerator(ctx, PseudoDefault)
 		if err != nil {
 			t.Error(err)
 			return nil

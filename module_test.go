@@ -14,7 +14,7 @@ func TestModule(t *testing.T) {
 	}
 	ctx, a := setupTest(t)
 	<-ctx.Run(func() error {
-		mod, err := NewModule(string(ptx))
+		mod, err := NewModule(ctx, string(ptx))
 		if err != nil {
 			t.Error(err)
 			return nil

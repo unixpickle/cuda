@@ -29,12 +29,13 @@ func Synchronize() error {
 type Module struct {
 	module C.CUmodule
 	cache  map[string]C.CUfunction
+	ctx    *Context
 }
 
 // NewModule creates a Module by compiling a chunk of PTX
 // code.
 //
-// This should be called from within a Context.
+// This should be called from within the Context.
 //
 // You can build PTX code using the nvcc compiler like so:
 //
@@ -47,7 +48,7 @@ type Module struct {
 // the Go program.
 // Depending on your use case, you may want to compile
 // separate PTX files for 32-bit and 64-bit hosts.
-func NewModule(ptx string) (*Module, error) {
+func NewModule(ctx *Context, ptx string) (*Module, error) {
 	cstr := unsafe.Pointer(C.CString(ptx))
 	defer C.free(cstr)
 
@@ -57,9 +58,12 @@ func NewModule(ptx string) (*Module, error) {
 		return nil, err
 	}
 
-	m := &Module{module: module, cache: map[string]C.CUfunction{}}
+	m := &Module{module: module, cache: map[string]C.CUfunction{}, ctx: ctx}
 	runtime.SetFinalizer(m, func(obj *Module) {
-		C.cuModuleUnload(obj.module)
+		go obj.ctx.Run(func() error {
+			C.cuModuleUnload(obj.module)
+			return nil
+		})
 	})
 
 	return m, nil
