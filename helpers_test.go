@@ -20,6 +20,6 @@ func setupTest(t *testing.T) (*Context, Allocator) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testingAllocator = GCAllocator(NewNativeAllocator(testingContext), 0)
+	testingAllocator = GCAllocator(NativeAllocator(testingContext), 0)
 	return testingContext, testingAllocator
 }

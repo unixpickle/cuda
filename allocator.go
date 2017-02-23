@@ -53,14 +53,14 @@ type nativeAllocator struct {
 	ctx *Context
 }
 
-// NewNativeAllocator creates an Allocator that allocates
+// NativeAllocator returns an Allocator that allocates
 // directly from the CUDA APIs.
 //
 // The resulting Allocator should be wrapped with
-// GCAllocator if you plan to use it with Buffer.
+// GCAllocator if you plan to use it with the Buffer API.
 //
 // This need not be called in a Context.
-func NewNativeAllocator(ctx *Context) Allocator {
+func NativeAllocator(ctx *Context) Allocator {
 	return &nativeAllocator{ctx: ctx}
 }
 
