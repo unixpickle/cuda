@@ -41,11 +41,6 @@ func TestModule(t *testing.T) {
 			return nil
 		}
 
-		if err := Synchronize(); err != nil {
-			t.Error(err)
-			return nil
-		}
-
 		res32 := make([]float32, 1550)
 		res64 := make([]float64, 1550)
 
