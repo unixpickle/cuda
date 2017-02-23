@@ -4,9 +4,9 @@ package curand
 #include "curand.h"
 
 // Needed to check for NULL from Cgo.
-const char * nullMessage = NULL;
+const char * goCurandNULLMessage = NULL;
 
-const char * go_cuda_curand_err(curandStatus_t s) {
+const char * go_curand_err(curandStatus_t s) {
 	switch (s) {
 	case CURAND_STATUS_SUCCESS:
 		return NULL;
@@ -48,8 +48,8 @@ import "github.com/unixpickle/cuda"
 //
 // If e is CURAND_STATUS_SUCCESS, nil is returned.
 func newError(context string, e C.curandStatus_t) error {
-	msg := C.go_cuda_curand_err(e)
-	if msg == C.nullMessage {
+	msg := C.go_curand_err(e)
+	if msg == C.goCurandNULLMessage {
 		return nil
 	}
 	name := C.GoString(msg)

@@ -72,8 +72,8 @@ func NewGenerator(t Type) (*Generator, error) {
 
 // Seed sets the seed for a pseudo-random generator.
 func (g *Generator) Seed(seed int64) error {
-	status := C.curandSetPseudoRandomGeneratorSeed(C.gen, C.ulonglong(seed))
-	return newBuffer("curandSetPseudoRandomGeneratorSeed", status)
+	status := C.curandSetPseudoRandomGeneratorSeed(g.gen, C.ulonglong(seed))
+	return newError("curandSetPseudoRandomGeneratorSeed", status)
 }
 
 // GenerateSeeds initializes the generator.
