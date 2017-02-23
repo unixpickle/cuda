@@ -83,6 +83,37 @@ func (b *buffer) WithPtr(f func(p unsafe.Pointer)) {
 	runtime.KeepAlive(b)
 }
 
+type slice struct {
+	Buffer
+	off  uintptr
+	size uintptr
+}
+
+// Slice creates a Buffer which views some part of the
+// contents of another Buffer.
+// The start and end indexes are inclusive and exclusive,
+// respectively.
+func Slice(b Buffer, start, end uintptr) Buffer {
+	if start > end || start > b.Size() || end > b.Size() {
+		panic("index out of bounds")
+	}
+	return &slice{
+		Buffer: b,
+		off:    start,
+		size:   end - start,
+	}
+}
+
+func (s *slice) Size() uintptr {
+	return s.size
+}
+
+func (s *slice) WithPtr(f func(p unsafe.Pointer)) {
+	s.Buffer.WithPtr(func(p unsafe.Pointer) {
+		f(unsafe.Pointer(uintptr(p) + s.off))
+	})
+}
+
 // ClearBuffer writes zeros over the contents of a Buffer.
 // It must be called from the correct Context.
 func ClearBuffer(b Buffer) error {
@@ -93,8 +124,7 @@ func ClearBuffer(b Buffer) error {
 	return newErrorRuntime("cudaMemset", res)
 }
 
-// WriteBuffer writes the data in a slice to a Buffer,
-// starting at the offset off in the Buffer.
+// WriteBuffer writes the data from a slice into a Buffer.
 // It must be called from the correct Context.
 //
 // Supported slice types are:
@@ -107,32 +137,32 @@ func ClearBuffer(b Buffer) error {
 //
 // Similar to the copy() built-in, the maximum possible
 // amount of data will be copied.
-func WriteBuffer(b Buffer, off uintptr, val interface{}) error {
+func WriteBuffer(b Buffer, val interface{}) error {
 	size := bytesForSlice(val)
-	if size == 0 || off >= b.Size() {
+	if size > b.Size() {
+		size = b.Size()
+	}
+	if size == 0 {
 		return nil
-	} else if size > b.Size()-off {
-		size = b.Size() - off
 	}
 
 	var res C.cudaError_t
 	b.WithPtr(func(ptr unsafe.Pointer) {
-		offPtr := unsafe.Pointer(uintptr(ptr) + off)
 		switch val := val.(type) {
 		case []byte:
-			res = C.cudaMemcpy(offPtr, unsafe.Pointer(&val[0]), C.size_t(size),
+			res = C.cudaMemcpy(ptr, unsafe.Pointer(&val[0]), C.size_t(size),
 				C.cudaMemcpyHostToDevice)
 		case []float64:
-			res = C.cudaMemcpy(offPtr, unsafe.Pointer(&val[0]), C.size_t(size),
+			res = C.cudaMemcpy(ptr, unsafe.Pointer(&val[0]), C.size_t(size),
 				C.cudaMemcpyHostToDevice)
 		case []float32:
-			res = C.cudaMemcpy(offPtr, unsafe.Pointer(&val[0]), C.size_t(size),
+			res = C.cudaMemcpy(ptr, unsafe.Pointer(&val[0]), C.size_t(size),
 				C.cudaMemcpyHostToDevice)
 		case []int32:
-			res = C.cudaMemcpy(offPtr, unsafe.Pointer(&val[0]), C.size_t(size),
+			res = C.cudaMemcpy(ptr, unsafe.Pointer(&val[0]), C.size_t(size),
 				C.cudaMemcpyHostToDevice)
 		case []uint32:
-			res = C.cudaMemcpy(offPtr, unsafe.Pointer(&val[0]), C.size_t(size),
+			res = C.cudaMemcpy(ptr, unsafe.Pointer(&val[0]), C.size_t(size),
 				C.cudaMemcpyHostToDevice)
 		}
 	})
@@ -140,37 +170,36 @@ func WriteBuffer(b Buffer, off uintptr, val interface{}) error {
 	return newErrorRuntime("cudaMemcpy", res)
 }
 
-// ReadBuffer reads the contents of a Buffer (starting at
-// the offset off) into a slice.
+// ReadBuffer reads the data from a Buffer into a slice.
 // This must be called from the correct Context.
 //
 // See WriteBuffer for details on supported slice types.
-func ReadBuffer(val interface{}, b Buffer, off uintptr) error {
+func ReadBuffer(val interface{}, b Buffer) error {
 	size := bytesForSlice(val)
-	if size == 0 || off >= b.Size() {
+	if size > b.Size() {
+		size = b.Size()
+	}
+	if size == 0 {
 		return nil
-	} else if size > b.Size()-off {
-		size = b.Size() - off
 	}
 
 	var res C.cudaError_t
 	b.WithPtr(func(ptr unsafe.Pointer) {
-		offPtr := unsafe.Pointer(uintptr(ptr) + off)
 		switch val := val.(type) {
 		case []byte:
-			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), offPtr, C.size_t(size),
+			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), ptr, C.size_t(size),
 				C.cudaMemcpyDeviceToHost)
 		case []float64:
-			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), offPtr, C.size_t(size),
+			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), ptr, C.size_t(size),
 				C.cudaMemcpyDeviceToHost)
 		case []float32:
-			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), offPtr, C.size_t(size),
+			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), ptr, C.size_t(size),
 				C.cudaMemcpyDeviceToHost)
 		case []int32:
-			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), offPtr, C.size_t(size),
+			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), ptr, C.size_t(size),
 				C.cudaMemcpyDeviceToHost)
 		case []uint32:
-			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), offPtr, C.size_t(size),
+			res = C.cudaMemcpy(unsafe.Pointer(&val[0]), ptr, C.size_t(size),
 				C.cudaMemcpyDeviceToHost)
 		}
 	})
@@ -179,21 +208,22 @@ func ReadBuffer(val interface{}, b Buffer, off uintptr) error {
 }
 
 // CopyBuffer copies as many bytes as possible from src
-// into dst, where both buffers are potentially offset.
-func CopyBuffer(dst Buffer, dstOff uintptr, src Buffer, srcOff uintptr) error {
-	if dstOff >= dst.Size() || srcOff >= src.Size() {
-		return nil
+// into dst.
+//
+// The two Buffers must not contain overlapping regions of
+// memory.
+func CopyBuffer(dst, src Buffer) error {
+	size := dst.Size()
+	if src.Size() < size {
+		size = src.Size()
 	}
-	size := dst.Size() - dstOff
-	if src.Size()-srcOff < size {
-		size = src.Size() - srcOff
+	if size == 0 {
+		return nil
 	}
 
 	var res C.cudaError_t
 	dst.WithPtr(func(dstPtr unsafe.Pointer) {
-		dstPtr = unsafe.Pointer(uintptr(dstPtr) + dstOff)
 		src.WithPtr(func(srcPtr unsafe.Pointer) {
-			srcPtr = unsafe.Pointer(uintptr(srcPtr) + srcOff)
 			res = C.cudaMemcpy(dstPtr, srcPtr, C.size_t(size),
 				C.cudaMemcpyDeviceToDevice)
 		})
