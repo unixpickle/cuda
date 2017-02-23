@@ -8,13 +8,20 @@ import "runtime"
 
 const defaultContextBuffer = 10
 
+func init() {
+	if err := newErrorDriver("cuInit", C.cuInit(0)); err != nil {
+		panic(err)
+	}
+}
+
 // A Context maintains a CUDA-dedicated thread.
 // All CUDA code should be run by a Context.
 type Context struct {
 	msgs chan<- *contextMsg
+	ctx  C.CUcontext
 }
 
-// NewContext creates a new Context.
+// NewContext creates a new Context on the Device.
 //
 // The bufferSize is the maximum number of asynchronous
 // calls that can be queued up at once.
@@ -22,7 +29,7 @@ type Context struct {
 // default.
 // A larger buffer size means that Run() is less likely
 // to block, all else equal.
-func NewContext(bufferSize int) (*Context, error) {
+func NewContext(d *Device, bufferSize int) (*Context, error) {
 	if bufferSize < -1 {
 		panic("buffer size out of range")
 	} else if bufferSize == -1 {
@@ -32,13 +39,17 @@ func NewContext(bufferSize int) (*Context, error) {
 	go contextLoop(msgs)
 	res := &Context{msgs: msgs}
 	err := <-res.Run(func() error {
-		return newErrorDriver("cuInit", C.cuInit(0))
+		return newErrorDriver("cuCtxCreate", C.cuCtxCreate(&res.ctx, 0, d.id))
 	})
 	if err != nil {
 		close(msgs)
 		return nil, err
 	}
 	runtime.SetFinalizer(res, func(obj *Context) {
+		obj.Run(func() error {
+			C.cuCtxDestroy(obj.ctx)
+			return nil
+		})
 		close(obj.msgs)
 	})
 	return res, nil
@@ -64,6 +75,7 @@ func (c *Context) Run(f func() error) <-chan error {
 		doneChan: ch,
 	}
 	c.msgs <- msg
+	runtime.KeepAlive(c)
 	return ch
 }
 
