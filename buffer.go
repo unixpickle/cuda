@@ -40,6 +40,9 @@ type buffer struct {
 // AllocBuffer allocates a new Buffer.
 //
 // This must be called in the Allocator's Context.
+//
+// This does not zero out the returned memory.
+// To do that, you should use ClearBuffer().
 func AllocBuffer(a Allocator, size uintptr) (Buffer, error) {
 	ptr, err := a.Alloc(size)
 	if err != nil {
@@ -78,6 +81,16 @@ func (b *buffer) Size() uintptr {
 func (b *buffer) WithPtr(f func(p unsafe.Pointer)) {
 	f(b.ptr)
 	runtime.KeepAlive(b)
+}
+
+// ClearBuffer writes zeros over the contents of a Buffer.
+// It must be called from the correct Context.
+func ClearBuffer(b Buffer) error {
+	var res C.cudaError_t
+	b.WithPtr(func(ptr unsafe.Pointer) {
+		res = C.cudaMemset(ptr, 0, C.size_t(b.Size()))
+	})
+	return newErrorRuntime("cudaMemset", res)
 }
 
 // WriteBuffer writes the data in a slice to a Buffer,

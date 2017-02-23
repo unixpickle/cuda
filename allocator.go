@@ -23,6 +23,9 @@ const minGCThresh = 1 << 15
 // Usually, you should prefer to use the Buffer type over
 // a direct memory allocation, since Buffers take care of
 // garbage collection for you.
+//
+// Allocators are not responsible for zeroing out returned
+// memory.
 type Allocator interface {
 	// Get the Context in which all calls to this Allocator
 	// should be made.
@@ -55,6 +58,8 @@ type nativeAllocator struct {
 //
 // The resulting Allocator should be wrapped with
 // GCAllocator if you plan to use it with Buffer.
+//
+// This need not be called in a Context.
 func NewNativeAllocator(ctx *Context) Allocator {
 	return &nativeAllocator{ctx: ctx}
 }
@@ -92,6 +97,8 @@ type gcAllocator struct {
 // If you are implementing your own Allocator, you will
 // likely want to wrap it with GCAllocator so that it
 // works nicely with the Buffer API.
+//
+// This need not be called in a Context.
 func GCAllocator(a Allocator, frac float64) Allocator {
 	if frac == 0 {
 		frac = 1
