@@ -68,6 +68,10 @@ func TestSlice(t *testing.T) {
 			t.Error(err)
 			return nil
 		}
+		if err := ClearBuffer(buf1); err != nil {
+			t.Error(err)
+			return nil
+		}
 		if err := WriteBuffer(Slice(buf1, 8, 15), []byte{1, 2, 3, 4}); err != nil {
 			t.Error(err)
 			return nil
