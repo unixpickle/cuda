@@ -32,7 +32,7 @@ func TestModule(t *testing.T) {
 		}
 
 		floatBuf.WithPtr(func(ptr unsafe.Pointer) {
-			err = mod.Launch("my_fancy_kernel", 13, 1, 1, 128, 1, 1, 0, 1550,
+			err = mod.Launch("my_fancy_kernel", 13, 1, 1, 128, 1, 1, 0, int(1550),
 				float32(3.7), float64(2.5), int(-3), uint(5), doubleBuf, ptr)
 		})
 

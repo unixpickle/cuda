@@ -5,6 +5,8 @@ package cuda
 #include "cuda.h"
 #include "cuda_runtime_api.h"
 
+const size_t ptrSize = sizeof(void *);
+const size_t maxArgSize = 8;
 const CUjit_option * nullJitOptions = NULL;
 const void ** nullPtrPtr = NULL;
 const CUstream nullStream = NULL;
@@ -55,7 +57,7 @@ func NewModule(ptx string) (*Module, error) {
 		return nil, err
 	}
 
-	m := &Module{module: module}
+	m := &Module{module: module, cache: map[string]C.CUfunction{}}
 	runtime.SetFinalizer(m, func(obj *Module) {
 		C.cuModuleUnload(obj.module)
 	})
@@ -122,15 +124,13 @@ func cleanKernelArguments(args []interface{}, newArgs []unsafe.Pointer,
 	if buf, ok := args[0].(Buffer); ok {
 		var res error
 		buf.WithPtr(func(ptr unsafe.Pointer) {
-			newArgs = append(newArgs, ptr)
-			res = cleanKernelArguments(args[1:], newArgs, f)
+			tempArgs := append([]interface{}{ptr}, args[1:]...)
+			res = cleanKernelArguments(tempArgs, newArgs, f)
 		})
 		return res
-	} else if ptr, ok := args[0].(unsafe.Pointer); ok {
-		return cleanKernelArguments(args[1:], append(newArgs, ptr), f)
 	}
 
-	valPtr := unsafe.Pointer(C.malloc(8))
+	valPtr := unsafe.Pointer(C.malloc(C.maxArgSize))
 	defer C.free(valPtr)
 
 	switch x := args[0].(type) {
@@ -146,6 +146,8 @@ func cleanKernelArguments(args []interface{}, newArgs []unsafe.Pointer,
 	case float64:
 		val := C.double(x)
 		C.memcpy(valPtr, unsafe.Pointer(&val), 8)
+	case unsafe.Pointer:
+		C.memcpy(valPtr, unsafe.Pointer(&x), C.ptrSize)
 	}
 
 	return cleanKernelArguments(args[1:], append(newArgs, valPtr), f)
