@@ -38,8 +38,8 @@ func NewContext(bufferSize int) (*Context, error) {
 		close(msgs)
 		return nil, err
 	}
-	runtime.SetFinalizer(res, func(obj interface{}) {
-		close(obj.(*Context).msgs)
+	runtime.SetFinalizer(res, func(obj *Context) {
+		close(obj.msgs)
 	})
 	return res, nil
 }
