@@ -165,6 +165,30 @@ func ReadBuffer(val interface{}, b Buffer, off uintptr) error {
 	return newErrorRuntime("cudaMemcpy", res)
 }
 
+// CopyBuffer copies as many bytes as possible from src
+// into dst, where both buffers are potentially offset.
+func CopyBuffer(dst Buffer, dstOff uintptr, src Buffer, srcOff uintptr) error {
+	if dstOff >= dst.Size() || srcOff >= src.Size() {
+		return nil
+	}
+	size := dst.Size() - dstOff
+	if src.Size()-srcOff < size {
+		size = src.Size() - srcOff
+	}
+
+	var res C.cudaError_t
+	dst.WithPtr(func(dstPtr unsafe.Pointer) {
+		dstPtr = unsafe.Pointer(uintptr(dstPtr) + dstOff)
+		src.WithPtr(func(srcPtr unsafe.Pointer) {
+			srcPtr = unsafe.Pointer(uintptr(srcPtr) + srcOff)
+			res = C.cudaMemcpy(dstPtr, srcPtr, C.size_t(size),
+				C.cudaMemcpyDeviceToDevice)
+		})
+	})
+
+	return newErrorRuntime("cudaMemcpy", res)
+}
+
 func bytesForSlice(val interface{}) uintptr {
 	switch val := val.(type) {
 	case []byte:
