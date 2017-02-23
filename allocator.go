@@ -80,8 +80,8 @@ type gcAllocator struct {
 	ratio  float64
 }
 
-// A GCAllocator wraps an Allocator in a new Allocator
-// which automatically triggers garbage collections.
+// GCAllocator wraps an Allocator in a new Allocator which
+// automatically triggers garbage collections.
 //
 // The frac argument behaves similarly to the GOGC
 // environment variable, except that GOGC is a percentage
