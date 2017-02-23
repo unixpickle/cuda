@@ -20,6 +20,8 @@ type Context struct {
 // calls that can be queued up at once.
 // A bufferSize of -1 is replaced with a reasonable
 // default.
+// A larger buffer size means that Run() is less likely
+// to block, all else equal.
 func NewContext(bufferSize int) (*Context, error) {
 	if bufferSize < -1 {
 		panic("buffer size out of range")
@@ -42,8 +44,11 @@ func NewContext(bufferSize int) (*Context, error) {
 	return res, nil
 }
 
-// Run runs f in the Context asynchronously and returns
-// a channel that will be sent the result of f.
+// Run runs f in the Context and returns a channel that
+// will be sent the result of f when f completes.
+//
+// This may block until some queued up functions have
+// finished running on the Context.
 //
 // If you are not interested in the result of f, you can
 // simply ignore the returned channel.
@@ -51,7 +56,7 @@ func NewContext(bufferSize int) (*Context, error) {
 // While f is running, no other function can run on the
 // Context.
 // This means that, to avoid deadlock, f should not use
-// the Context in a blocking manner.
+// the Context.
 func (c *Context) Run(f func() error) <-chan error {
 	ch := make(chan error, 1)
 	msg := &contextMsg{
