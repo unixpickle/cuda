@@ -45,17 +45,17 @@ func AllocBuffer(a Allocator, size uintptr) (Buffer, error) {
 	if err != nil {
 		return nil, err
 	}
-	return WrapBuffer(a, ptr, size), nil
+	return WrapPointer(a, ptr, size), nil
 }
 
-// WrapBuffer wraps a pointer in a Buffer.
+// WrapPointer wraps a pointer in a Buffer.
 // You must specify the Allocator from which the pointer
 // originated and the size of the buffer.
 //
 // After calling this, you should not use the pointer
 // outside of the buffer.
 // The Buffer will automatically free the pointer.
-func WrapBuffer(a Allocator, ptr unsafe.Pointer, size uintptr) Buffer {
+func WrapPointer(a Allocator, ptr unsafe.Pointer, size uintptr) Buffer {
 	res := &buffer{alloc: a, size: size, ptr: ptr}
 	runtime.SetFinalizer(res, func(obj *buffer) {
 		allocator := obj.alloc
