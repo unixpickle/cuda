@@ -2,7 +2,13 @@ package cuda
 
 import "testing"
 
+var testingContext *Context
+var testingAllocator Allocator
+
 func setupTest(t *testing.T) (*Context, Allocator) {
+	if testingContext != nil {
+		return testingContext, testingAllocator
+	}
 	devices, err := AllDevices()
 	if err != nil {
 		t.Fatal(err)
@@ -10,9 +16,10 @@ func setupTest(t *testing.T) (*Context, Allocator) {
 	if len(devices) == 0 {
 		t.Fatal("no CUDA devices")
 	}
-	ctx, err := NewContext(devices[0], 10)
+	testingContext, err = NewContext(devices[0], 10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return ctx, GCAllocator(NewNativeAllocator(ctx), 0)
+	testingAllocator = GCAllocator(NewNativeAllocator(testingContext), 0)
+	return testingContext, testingAllocator
 }
