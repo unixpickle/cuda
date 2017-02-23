@@ -1,7 +1,7 @@
 package cuda
 
 /*
-#import "cuda.h"
+#import <cuda.h>
 */
 import "C"
 

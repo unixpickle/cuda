@@ -2,7 +2,7 @@
 package curand
 
 /*
-#include "curand.h"
+#include <curand.h>
 
 curandRngType_t go_curand_rng_type(int idx) {
 	curandRngType_t options[] = {

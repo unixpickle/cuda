@@ -1,8 +1,8 @@
 package cuda
 
 /*
-#import "cuda.h"
-#import "cuda_runtime_api.h"
+#include <cuda.h>
+#include <cuda_runtime_api.h>
 */
 import "C"
 

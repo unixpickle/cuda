@@ -2,8 +2,8 @@ package cuda
 
 /*
 #include <string.h>
-#include "cuda.h"
-#include "cuda_runtime_api.h"
+#include <cuda.h>
+#include <cuda_runtime_api.h>
 
 const size_t ptrSize = sizeof(void *);
 const size_t maxArgSize = 8;

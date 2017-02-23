@@ -1,7 +1,7 @@
 package cuda
 
 /*
-#include "cuda.h"
+#include <cuda.h>
 */
 import "C"
 import "runtime"

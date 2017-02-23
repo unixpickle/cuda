@@ -1,7 +1,7 @@
 package curand
 
 /*
-#include "curand.h"
+#include <curand.h>
 
 // Needed to check for NULL from Cgo.
 const char * goCurandNULLMessage = NULL;
