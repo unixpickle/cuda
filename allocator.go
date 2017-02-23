@@ -1,5 +1,9 @@
 package cuda
 
+/*
+#include "cuda_runtime_api.h"
+#include "cuda.h"
+*/
 import "C"
 
 import (
@@ -64,12 +68,12 @@ func (n *nativeAllocator) Alloc(size C.size_t) (unsafe.Pointer, error) {
 	return ptr, NewErrorRuntime("cudaMalloc", C.cudaMalloc(&ptr, size))
 }
 
-func (n *nativeAllocator) Free(ptr unsafe.Pointer) {
+func (n *nativeAllocator) Free(ptr unsafe.Pointer, size C.size_t) {
 	C.cudaFree(ptr)
 }
 
 type gcAllocator struct {
-	Allocator Allocator
+	Allocator
 
 	inUse  C.size_t
 	thresh C.size_t
@@ -136,7 +140,7 @@ func (g *gcAllocator) Free(ptr unsafe.Pointer, size C.size_t) {
 }
 
 func (g *gcAllocator) updatedThresh() C.size_t {
-	res := C.size_t(float64(g.inUse) * g.increaseFrac)
+	res := C.size_t(float64(g.inUse) * g.ratio)
 	if res > minGCThresh {
 		return res
 	} else {
