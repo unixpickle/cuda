@@ -245,6 +245,18 @@ func TestDasum(t *testing.T) {
 	}, 1)
 }
 
+func TestSnrm2(t *testing.T) {
+	testNorm32(t, func(h *Handle, n int, x cuda.Buffer, inc int, res interface{}) error {
+		return h.Snrm2(n, x, inc, res)
+	}, 2)
+}
+
+func TestDnrm2(t *testing.T) {
+	testNorm64(t, func(h *Handle, n int, x cuda.Buffer, inc int, res interface{}) error {
+		return h.Dnrm2(n, x, inc, res)
+	}, 2)
+}
+
 func runTestActions32(t *testing.T, fs []func() error, expected [][]float32, buf cuda.Buffer) {
 	for i, f := range fs {
 		if err := f(); err != nil {

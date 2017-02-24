@@ -266,6 +266,37 @@ func (h *Handle) Dasum(n int, x cuda.Buffer, incx int, result interface{}) error
 	return newError("cublasDasum", h.norm64(n, x, incx, result, f))
 }
 
+// Snrm2 computes the Euclidean norm of a single-precision
+// vector.
+//
+// The result argument's type depends on the pointer mode.
+// In the Host pointer mode, use *float32.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Snrm2(n int, x cuda.Buffer, incx int, result interface{}) error {
+	f := func(arg1 C.cublasHandle_t, arg2 C.int, arg3 *C.float, arg4 C.int,
+		arg5 *C.float) C.cublasStatus_t {
+		return C.cublasSnrm2(arg1, arg2, arg3, arg4, arg5)
+	}
+	return newError("cublasSnrm2", h.norm32(n, x, incx, result, f))
+}
+
+// Dnrm2 is like Snrm2, but for double-precision.
+//
+// The result argument's type depends on the pointer mode.
+// In the Host pointer mode, use *float64.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Dnrm2(n int, x cuda.Buffer, incx int, result interface{}) error {
+	f := func(arg1 C.cublasHandle_t, arg2 C.int, arg3 *C.double, arg4 C.int,
+		arg5 *C.double) C.cublasStatus_t {
+		return C.cublasDnrm2(arg1, arg2, arg3, arg4, arg5)
+	}
+	return newError("cublasDnrm2", h.norm64(n, x, incx, result, f))
+}
+
 func (h *Handle) norm32(n int, x cuda.Buffer, incx int, result interface{},
 	f func(C.cublasHandle_t, C.int, *C.float, C.int, *C.float) C.cublasStatus_t) C.cublasStatus_t {
 	if incx <= 0 {
@@ -306,11 +337,11 @@ func (h *Handle) norm64(n int, x cuda.Buffer, incx int, result interface{},
 	var res C.cublasStatus_t
 	x.WithPtr(func(xPtr unsafe.Pointer) {
 		if h.PointerMode() == Host {
-			res = C.cublasDasum(h.handle, safeIntToC(n), (*C.double)(xPtr),
+			res = f(h.handle, safeIntToC(n), (*C.double)(xPtr),
 				safeIntToC(incx), (*C.double)(result.(*float64)))
 		} else {
 			result.(cuda.Buffer).WithPtr(func(resPtr unsafe.Pointer) {
-				res = C.cublasDasum(h.handle, safeIntToC(n), (*C.double)(xPtr),
+				res = f(h.handle, safeIntToC(n), (*C.double)(xPtr),
 					safeIntToC(incx), (*C.double)(resPtr))
 			})
 		}
