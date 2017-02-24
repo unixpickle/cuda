@@ -25,7 +25,7 @@
 //
 //     devices, err := cuda.AllDevices()
 //     if err != nil {
-// 	       // Handle error.
+//         // Handle error.
 //     }
 //     if len(devices) == 0 {
 //         // No devices found.
