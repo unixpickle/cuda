@@ -38,7 +38,11 @@ func (h *Handle) Sdot(n int, x cuda.Buffer, incx int, y cuda.Buffer, incy int,
 					(*C.float)(yPtr), safeIntToC(incy),
 					(*C.float)(result.(*float32)))
 			} else {
-				result.(cuda.Buffer).WithPtr(func(outPtr unsafe.Pointer) {
+				b := result.(cuda.Buffer)
+				if b.Size() < 4 {
+					panic("buffer underflow")
+				}
+				b.WithPtr(func(outPtr unsafe.Pointer) {
 					res = C.cublasSdot(h.handle, safeIntToC(n),
 						(*C.float)(xPtr), safeIntToC(incx),
 						(*C.float)(yPtr), safeIntToC(incy),
@@ -77,7 +81,11 @@ func (h *Handle) Ddot(n int, x cuda.Buffer, incx int, y cuda.Buffer, incy int,
 					(*C.double)(yPtr), safeIntToC(incy),
 					(*C.double)(result.(*float64)))
 			} else {
-				result.(cuda.Buffer).WithPtr(func(outPtr unsafe.Pointer) {
+				b := result.(cuda.Buffer)
+				if b.Size() < 8 {
+					panic("buffer underflow")
+				}
+				b.WithPtr(func(outPtr unsafe.Pointer) {
 					res = C.cublasDdot(h.handle, safeIntToC(n),
 						(*C.double)(xPtr), safeIntToC(incx),
 						(*C.double)(yPtr), safeIntToC(incy),
@@ -112,7 +120,11 @@ func (h *Handle) Sscal(n int, alpha interface{}, x cuda.Buffer, incx int) error 
 			res = C.cublasSscal(h.handle, safeIntToC(n), (*C.float)(alpha.(*float32)),
 				(*C.float)(ptr), safeIntToC(incx))
 		} else {
-			alpha.(cuda.Buffer).WithPtr(func(alphaPtr unsafe.Pointer) {
+			b := alpha.(cuda.Buffer)
+			if b.Size() < 4 {
+				panic("buffer underflow")
+			}
+			b.WithPtr(func(alphaPtr unsafe.Pointer) {
 				res = C.cublasSscal(h.handle, safeIntToC(n), (*C.float)(alphaPtr),
 					(*C.float)(ptr), safeIntToC(incx))
 			})
@@ -145,7 +157,11 @@ func (h *Handle) Dscal(n int, alpha interface{}, x cuda.Buffer, incx int) error 
 			res = C.cublasDscal(h.handle, safeIntToC(n), (*C.double)(alpha.(*float64)),
 				(*C.double)(ptr), safeIntToC(incx))
 		} else {
-			alpha.(cuda.Buffer).WithPtr(func(alphaPtr unsafe.Pointer) {
+			b := alpha.(cuda.Buffer)
+			if b.Size() < 8 {
+				panic("buffer underflow")
+			}
+			b.WithPtr(func(alphaPtr unsafe.Pointer) {
 				res = C.cublasDscal(h.handle, safeIntToC(n), (*C.double)(alphaPtr),
 					(*C.double)(ptr), safeIntToC(incx))
 			})
@@ -183,7 +199,11 @@ func (h *Handle) Saxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 					(*C.float)(xPtr), safeIntToC(incx),
 					(*C.float)(yPtr), safeIntToC(incy))
 			} else {
-				alpha.(cuda.Buffer).WithPtr(func(alphaPtr unsafe.Pointer) {
+				b := alpha.(cuda.Buffer)
+				if b.Size() < 4 {
+					panic("buffer underflow")
+				}
+				b.WithPtr(func(alphaPtr unsafe.Pointer) {
 					res = C.cublasSaxpy(h.handle, safeIntToC(n), (*C.float)(alphaPtr),
 						(*C.float)(xPtr), safeIntToC(incx),
 						(*C.float)(yPtr), safeIntToC(incy))
@@ -223,7 +243,11 @@ func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 					(*C.double)(xPtr), safeIntToC(incx),
 					(*C.double)(yPtr), safeIntToC(incy))
 			} else {
-				alpha.(cuda.Buffer).WithPtr(func(alphaPtr unsafe.Pointer) {
+				b := alpha.(cuda.Buffer)
+				if b.Size() < 8 {
+					panic("buffer underflow")
+				}
+				b.WithPtr(func(alphaPtr unsafe.Pointer) {
 					res = C.cublasDaxpy(h.handle, safeIntToC(n), (*C.double)(alphaPtr),
 						(*C.double)(xPtr), safeIntToC(incx),
 						(*C.double)(yPtr), safeIntToC(incy))
@@ -313,7 +337,11 @@ func (h *Handle) norm32(n int, x cuda.Buffer, incx int, result interface{},
 			res = f(h.handle, safeIntToC(n), (*C.float)(xPtr),
 				safeIntToC(incx), (*C.float)(result.(*float32)))
 		} else {
-			result.(cuda.Buffer).WithPtr(func(resPtr unsafe.Pointer) {
+			b := result.(cuda.Buffer)
+			if b.Size() < 4 {
+				panic("buffer underflow")
+			}
+			b.WithPtr(func(resPtr unsafe.Pointer) {
 				res = f(h.handle, safeIntToC(n), (*C.float)(xPtr),
 					safeIntToC(incx), (*C.float)(resPtr))
 			})
@@ -340,7 +368,11 @@ func (h *Handle) norm64(n int, x cuda.Buffer, incx int, result interface{},
 			res = f(h.handle, safeIntToC(n), (*C.double)(xPtr),
 				safeIntToC(incx), (*C.double)(result.(*float64)))
 		} else {
-			result.(cuda.Buffer).WithPtr(func(resPtr unsafe.Pointer) {
+			b := result.(cuda.Buffer)
+			if b.Size() < 8 {
+				panic("buffer underflow")
+			}
+			b.WithPtr(func(resPtr unsafe.Pointer) {
 				res = f(h.handle, safeIntToC(n), (*C.double)(xPtr),
 					safeIntToC(incx), (*C.double)(resPtr))
 			})
