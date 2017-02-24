@@ -297,8 +297,8 @@ func testNorm32(t *testing.T, f func(h *Handle, n int, x cuda.Buffer, inc int,
 	res interface{}) error, base int) {
 	ctx, handle, buffers := setupTest(t, []float32{1, 2, 3, -1, -2, -4}, []float32{0.156})
 
-	stride2Ans := map[int]float32{0: 3, 1: 6, 2: float32(math.Sqrt(14))}
-	stride1Ans := map[int]float32{0: 4, 1: 13, 2: float32(math.Sqrt(35))}
+	stride2Ans := map[int]float32{1: 6, 2: float32(math.Sqrt(14))}
+	stride1Ans := map[int]float32{1: 13, 2: float32(math.Sqrt(35))}
 
 	<-ctx.Run(func() error {
 		var res float32
