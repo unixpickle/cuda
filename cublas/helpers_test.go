@@ -2,6 +2,7 @@ package cublas
 
 import (
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/unixpickle/cuda"
@@ -56,4 +57,28 @@ func setupTest(t *testing.T, inBuffers ...interface{}) (*cuda.Context, *Handle, 
 	}
 
 	return testContext, testHandle, outBufs
+}
+
+func maxDelta32(v1, v2 []float32) float32 {
+	var delta float32
+	for i, x := range v1 {
+		y := v2[i]
+		diff := float32(math.Abs(float64(x - y)))
+		if diff > delta {
+			delta = diff
+		}
+	}
+	return delta
+}
+
+func maxDelta64(v1, v2 []float64) float64 {
+	var delta float64
+	for i, x := range v1 {
+		y := v2[i]
+		diff := math.Abs(x - y)
+		if diff > delta {
+			delta = diff
+		}
+	}
+	return delta
 }

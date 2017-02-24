@@ -86,7 +86,73 @@ func (h *Handle) Ddot(n int, x cuda.Buffer, incx int, y cuda.Buffer, incy int,
 			}
 		})
 	})
-	return newError("cublasSdot", res)
+	return newError("cublasDdot", res)
+}
+
+// Sscal scales a single-precision vector.
+//
+// The argument alpha's type depends on the pointer mode.
+// In the Host pointer mode, use float32 or *float32.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Sscal(n int, alpha interface{}, x cuda.Buffer, incx int) error {
+	if incx < 0 {
+		panic("increment out of bounds")
+	} else if n < 0 {
+		panic("size out of bounds")
+	} else if stridedSize(x.Size()/4, incx) < uintptr(n) {
+		panic("index out of bounds")
+	}
+
+	var res C.cublasStatus_t
+	x.WithPtr(func(ptr unsafe.Pointer) {
+		if h.PointerMode() == Host {
+			pointerizeInputs(&alpha)
+			res = C.cublasSscal(h.handle, safeIntToC(n), (*C.float)(alpha.(*float32)),
+				(*C.float)(ptr), safeIntToC(incx))
+		} else {
+			alpha.(cuda.Buffer).WithPtr(func(alphaPtr unsafe.Pointer) {
+				res = C.cublasSscal(h.handle, safeIntToC(n), (*C.float)(alphaPtr),
+					(*C.float)(ptr), safeIntToC(incx))
+			})
+		}
+	})
+
+	return newError("cublasSscal", res)
+}
+
+// Dscal is like Sscal, but for double-precision.
+//
+// The argument alpha's type depends on the pointer mode.
+// In the Host pointer mode, use float64 or *float64.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Dscal(n int, alpha interface{}, x cuda.Buffer, incx int) error {
+	if incx < 0 {
+		panic("increment out of bounds")
+	} else if n < 0 {
+		panic("size out of bounds")
+	} else if stridedSize(x.Size()/8, incx) < uintptr(n) {
+		panic("index out of bounds")
+	}
+
+	var res C.cublasStatus_t
+	x.WithPtr(func(ptr unsafe.Pointer) {
+		if h.PointerMode() == Host {
+			pointerizeInputs(&alpha)
+			res = C.cublasDscal(h.handle, safeIntToC(n), (*C.double)(alpha.(*float64)),
+				(*C.double)(ptr), safeIntToC(incx))
+		} else {
+			alpha.(cuda.Buffer).WithPtr(func(alphaPtr unsafe.Pointer) {
+				res = C.cublasDscal(h.handle, safeIntToC(n), (*C.double)(alphaPtr),
+					(*C.double)(ptr), safeIntToC(incx))
+			})
+		}
+	})
+
+	return newError("cublasDscal", res)
 }
 
 func stridedSize(totalCount uintptr, inc int) uintptr {
