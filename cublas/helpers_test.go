@@ -48,12 +48,14 @@ func setupTest(t *testing.T, inBuffers ...interface{}) (*cuda.Context, *Handle, 
 			default:
 				err = errors.New("unknown buffer type")
 			}
+			if err == nil {
+				err = cuda.WriteBuffer(outBufs[i], x)
+			}
 			return
 		})
 		if err != nil {
 			t.Fatalf("buffer %d: %s", i, err)
 		}
-		cuda.WriteBuffer(outBufs[i], x)
 	}
 
 	return testContext, testHandle, outBufs
