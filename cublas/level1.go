@@ -162,8 +162,8 @@ func (h *Handle) Dscal(n int, alpha interface{}, x cuda.Buffer, incx int) error 
 // In the Device pointer mode, use cuda.Buffer.
 //
 // This must be called inside the cuda.Context.
-func (h *Handle) Saxpy(n int, alpha interface{}, x cuda.Buffer, incx int, y cuda.Buffer,
-	incy int) error {
+func (h *Handle) Saxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
+	y cuda.Buffer, incy int) error {
 	if incx < 0 || incy < 0 {
 		panic("increment out of bounds")
 	} else if n < 0 {
@@ -202,8 +202,8 @@ func (h *Handle) Saxpy(n int, alpha interface{}, x cuda.Buffer, incx int, y cuda
 // In the Device pointer mode, use cuda.Buffer.
 //
 // This must be called inside the cuda.Context.
-func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int, y cuda.Buffer,
-	incy int) error {
+func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
+	y cuda.Buffer, incy int) error {
 	if incx < 0 || incy < 0 {
 		panic("increment out of bounds")
 	} else if n < 0 {
