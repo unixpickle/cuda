@@ -1,6 +1,7 @@
 package cublas
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/unixpickle/cuda"
@@ -23,27 +24,31 @@ func setupTest(t *testing.T, inBuffers ...interface{}) (*cuda.Context, *Handle, 
 		if err != nil {
 			t.Fatal(err)
 		}
-		<-testContext.Run(func() error {
+		testAllocator = cuda.GCAllocator(cuda.NativeAllocator(testContext), 0)
+	}
+	if testHandle == nil {
+		err := <-testContext.Run(func() (err error) {
 			testHandle, err = NewHandle(testContext)
-			return nil
+			return
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		testAllocator = cuda.GCAllocator(cuda.NativeAllocator(testContext), 0)
 	}
 
 	outBufs := make([]cuda.Buffer, len(inBuffers))
 	for i, x := range inBuffers {
-		var err error
-		switch x := x.(type) {
-		case []float32:
-			outBufs[i], err = cuda.AllocBuffer(testAllocator, uintptr(len(x)*4))
-		case []float64:
-			outBufs[i], err = cuda.AllocBuffer(testAllocator, uintptr(len(x)*8))
-		default:
-			panic("unknown buffer type")
-		}
+		err := <-testContext.Run(func() (err error) {
+			switch x := x.(type) {
+			case []float32:
+				outBufs[i], err = cuda.AllocBuffer(testAllocator, uintptr(len(x)*4))
+			case []float64:
+				outBufs[i], err = cuda.AllocBuffer(testAllocator, uintptr(len(x)*8))
+			default:
+				err = errors.New("unknown buffer type")
+			}
+			return
+		})
 		if err != nil {
 			t.Fatalf("buffer %d: %s", i, err)
 		}
