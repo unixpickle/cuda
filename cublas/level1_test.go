@@ -233,6 +233,80 @@ func TestDaxpy(t *testing.T) {
 	})
 }
 
+func TestIsamax(t *testing.T) {
+	ctx, handle, buffers := setupTest(t, []float32{1, 2, 3, 4, -3, -2, -5},
+		[]int32{3})
+	<-ctx.Run(func() error {
+		var idx int
+		if err := handle.Isamax(6, buffers[0], 1, &idx); err != nil {
+			t.Error(err)
+			return nil
+		}
+		if idx != 4 {
+			t.Errorf("expected 4 but got %v", idx)
+		}
+
+		if err := handle.SetPointerMode(Device); err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer handle.SetPointerMode(Host)
+
+		if err := handle.Isamax(4, buffers[0], 2, buffers[1]); err != nil {
+			t.Error(err)
+			return nil
+		}
+
+		resSlice := make([]int32, 1)
+		if err := cuda.ReadBuffer(resSlice, buffers[1]); err != nil {
+			t.Error(err)
+			return nil
+		}
+		if resSlice[0] != 4 {
+			t.Errorf("expected 4 but got %v", resSlice[0])
+		}
+
+		return nil
+	})
+}
+
+func TestIdamax(t *testing.T) {
+	ctx, handle, buffers := setupTest(t, []float64{1, 2, 3, 4, -3, -2, -5},
+		[]int32{3})
+	<-ctx.Run(func() error {
+		var idx int
+		if err := handle.Idamax(6, buffers[0], 1, &idx); err != nil {
+			t.Error(err)
+			return nil
+		}
+		if idx != 4 {
+			t.Errorf("expected 4 but got %v", idx)
+		}
+
+		if err := handle.SetPointerMode(Device); err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer handle.SetPointerMode(Host)
+
+		if err := handle.Idamax(4, buffers[0], 2, buffers[1]); err != nil {
+			t.Error(err)
+			return nil
+		}
+
+		resSlice := make([]int32, 1)
+		if err := cuda.ReadBuffer(resSlice, buffers[1]); err != nil {
+			t.Error(err)
+			return nil
+		}
+		if resSlice[0] != 4 {
+			t.Errorf("expected 4 but got %v", resSlice[0])
+		}
+
+		return nil
+	})
+}
+
 func TestSasum(t *testing.T) {
 	testNorm32(t, func(h *Handle, n int, x cuda.Buffer, inc int, res interface{}) error {
 		return h.Sasum(n, x, inc, res)

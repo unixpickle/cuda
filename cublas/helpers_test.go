@@ -45,6 +45,8 @@ func setupTest(t *testing.T, inBuffers ...interface{}) (*cuda.Context, *Handle, 
 				outBufs[i], err = cuda.AllocBuffer(testAllocator, uintptr(len(x)*4))
 			case []float64:
 				outBufs[i], err = cuda.AllocBuffer(testAllocator, uintptr(len(x)*8))
+			case []int32:
+				outBufs[i], err = cuda.AllocBuffer(testAllocator, uintptr(len(x)*4))
 			default:
 				err = errors.New("unknown buffer type")
 			}

@@ -259,6 +259,84 @@ func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 	return newError("cublasDaxpy", res)
 }
 
+// Isamax gets the index of the first single-precision
+// vector component with the max absolute value.
+// The resulting indices start at one, not zero.
+//
+// The result argument's type depends on the pointer mode.
+// In the Host pointer mode, use *int.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Isamax(n int, x cuda.Buffer, incx int, result interface{}) error {
+	if incx <= 0 {
+		panic("increment out of bounds")
+	} else if n < 0 {
+		panic("size out of bounds")
+	} else if stridedSize(x.Size()/4, incx) < uintptr(n) {
+		panic("index out of bounds")
+	}
+
+	var res C.cublasStatus_t
+	x.WithPtr(func(xPtr unsafe.Pointer) {
+		if h.PointerMode() == Host {
+			var resInt C.int
+			res = C.cublasIsamax(h.handle, safeIntToC(n), (*C.float)(xPtr),
+				safeIntToC(incx), &resInt)
+			*(result.(*int)) = int(resInt)
+		} else {
+			b := result.(cuda.Buffer)
+			if b.Size() < 4 {
+				panic("buffer underflow")
+			}
+			b.WithPtr(func(resPtr unsafe.Pointer) {
+				res = C.cublasIsamax(h.handle, safeIntToC(n), (*C.float)(xPtr),
+					safeIntToC(incx), (*C.int)(resPtr))
+			})
+		}
+	})
+
+	return newError("cublasIsamax", res)
+}
+
+// Idamax is like Isamax, but for double-precision.
+//
+// The result argument's type depends on the pointer mode.
+// In the Host pointer mode, use *int.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Idamax(n int, x cuda.Buffer, incx int, result interface{}) error {
+	if incx <= 0 {
+		panic("increment out of bounds")
+	} else if n < 0 {
+		panic("size out of bounds")
+	} else if stridedSize(x.Size()/8, incx) < uintptr(n) {
+		panic("index out of bounds")
+	}
+
+	var res C.cublasStatus_t
+	x.WithPtr(func(xPtr unsafe.Pointer) {
+		if h.PointerMode() == Host {
+			var resInt C.int
+			res = C.cublasIdamax(h.handle, safeIntToC(n), (*C.double)(xPtr),
+				safeIntToC(incx), &resInt)
+			*(result.(*int)) = int(resInt)
+		} else {
+			b := result.(cuda.Buffer)
+			if b.Size() < 4 {
+				panic("buffer underflow")
+			}
+			b.WithPtr(func(resPtr unsafe.Pointer) {
+				res = C.cublasIdamax(h.handle, safeIntToC(n), (*C.double)(xPtr),
+					safeIntToC(incx), (*C.int)(resPtr))
+			})
+		}
+	})
+
+	return newError("cublasIdamax", res)
+}
+
 // Sasum sums the absolute values of the components in a
 // single-precision vector.
 //
