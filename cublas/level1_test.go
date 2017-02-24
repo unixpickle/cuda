@@ -233,6 +233,18 @@ func TestDaxpy(t *testing.T) {
 	})
 }
 
+func TestSasum(t *testing.T) {
+	testNorm32(t, func(h *Handle, n int, x cuda.Buffer, inc int, res interface{}) error {
+		return h.Sasum(n, x, inc, res)
+	}, 1)
+}
+
+func TestDasum(t *testing.T) {
+	testNorm64(t, func(h *Handle, n int, x cuda.Buffer, inc int, res interface{}) error {
+		return h.Dasum(n, x, inc, res)
+	}, 1)
+}
+
 func runTestActions32(t *testing.T, fs []func() error, expected [][]float32, buf cuda.Buffer) {
 	for i, f := range fs {
 		if err := f(); err != nil {
@@ -267,4 +279,84 @@ func runTestActions64(t *testing.T, fs []func() error, expected [][]float64, buf
 			t.Errorf("action %d: expected %v but got %v", i, x, actual)
 		}
 	}
+}
+
+func testNorm32(t *testing.T, f func(h *Handle, n int, x cuda.Buffer, inc int,
+	res interface{}) error, base int) {
+	ctx, handle, buffers := setupTest(t, []float32{1, 2, 3, -1, -2, -4}, []float32{0.156})
+
+	stride2Ans := map[int]float32{0: 3, 1: 6, 2: float32(math.Sqrt(14))}
+	stride1Ans := map[int]float32{0: 4, 1: 13, 2: float32(math.Sqrt(35))}
+
+	<-ctx.Run(func() error {
+		var res float32
+		if err := f(handle, 3, buffers[0], 2, &res); err != nil {
+			t.Error(err)
+			return nil
+		}
+		if math.Abs(float64(res-stride2Ans[base])) > 1e-4 {
+			t.Errorf("expected %v but got %v", stride2Ans[base], res)
+		}
+
+		if err := handle.SetPointerMode(Device); err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer handle.SetPointerMode(Host)
+
+		if err := f(handle, 6, buffers[0], 1, buffers[1]); err != nil {
+			t.Error(err)
+			return nil
+		}
+		resSlice := make([]float32, 1)
+		if err := cuda.ReadBuffer(resSlice, buffers[1]); err != nil {
+			t.Error(err)
+			return nil
+		}
+		res = resSlice[0]
+		if math.Abs(float64(res-stride1Ans[base])) > 1e-4 {
+			t.Errorf("expected %v but got %v", stride1Ans[base], res)
+		}
+		return nil
+	})
+}
+
+func testNorm64(t *testing.T, f func(h *Handle, n int, x cuda.Buffer, inc int,
+	res interface{}) error, base int) {
+	ctx, handle, buffers := setupTest(t, []float64{1, 2, 3, -1, -2, -4}, []float64{0.156})
+
+	stride2Ans := map[int]float64{0: 3, 1: 6, 2: math.Sqrt(14)}
+	stride1Ans := map[int]float64{0: 4, 1: 13, 2: math.Sqrt(35)}
+
+	<-ctx.Run(func() error {
+		var res float64
+		if err := f(handle, 3, buffers[0], 2, &res); err != nil {
+			t.Error(err)
+			return nil
+		}
+		if math.Abs(res-stride2Ans[base]) > 1e-4 {
+			t.Errorf("expected %v but got %v", stride2Ans[base], res)
+		}
+
+		if err := handle.SetPointerMode(Device); err != nil {
+			t.Error(err)
+			return nil
+		}
+		defer handle.SetPointerMode(Host)
+
+		if err := f(handle, 6, buffers[0], 1, buffers[1]); err != nil {
+			t.Error(err)
+			return nil
+		}
+		resSlice := make([]float64, 1)
+		if err := cuda.ReadBuffer(resSlice, buffers[1]); err != nil {
+			t.Error(err)
+			return nil
+		}
+		res = resSlice[0]
+		if math.Abs(res-stride1Ans[base]) > 1e-4 {
+			t.Errorf("expected %v but got %v", stride1Ans[base], res)
+		}
+		return nil
+	})
 }

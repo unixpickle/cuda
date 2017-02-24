@@ -97,7 +97,7 @@ func (h *Handle) Ddot(n int, x cuda.Buffer, incx int, y cuda.Buffer, incy int,
 //
 // This must be called inside the cuda.Context.
 func (h *Handle) Sscal(n int, alpha interface{}, x cuda.Buffer, incx int) error {
-	if incx < 0 {
+	if incx <= 0 {
 		panic("increment out of bounds")
 	} else if n < 0 {
 		panic("size out of bounds")
@@ -130,7 +130,7 @@ func (h *Handle) Sscal(n int, alpha interface{}, x cuda.Buffer, incx int) error 
 //
 // This must be called inside the cuda.Context.
 func (h *Handle) Dscal(n int, alpha interface{}, x cuda.Buffer, incx int) error {
-	if incx < 0 {
+	if incx <= 0 {
 		panic("increment out of bounds")
 	} else if n < 0 {
 		panic("size out of bounds")
@@ -164,7 +164,7 @@ func (h *Handle) Dscal(n int, alpha interface{}, x cuda.Buffer, incx int) error 
 // This must be called inside the cuda.Context.
 func (h *Handle) Saxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 	y cuda.Buffer, incy int) error {
-	if incx < 0 || incy < 0 {
+	if incx <= 0 || incy <= 0 {
 		panic("increment out of bounds")
 	} else if n < 0 {
 		panic("size out of bounds")
@@ -204,7 +204,7 @@ func (h *Handle) Saxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 // This must be called inside the cuda.Context.
 func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 	y cuda.Buffer, incy int) error {
-	if incx < 0 || incy < 0 {
+	if incx <= 0 || incy <= 0 {
 		panic("increment out of bounds")
 	} else if n < 0 {
 		panic("size out of bounds")
@@ -233,6 +233,71 @@ func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 	})
 
 	return newError("cublasDaxpy", res)
+}
+
+// Sasum sums the absolute values of the components in a
+// single-precision vector.
+//
+// The result argument's type depends on the pointer mode.
+// In the Host pointer mode, use *float32.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Sasum(n int, x cuda.Buffer, incx int, result interface{}) error {
+	if incx <= 0 {
+		panic("increment out of bounds")
+	} else if n < 0 {
+		panic("size out of bounds")
+	} else if stridedSize(x.Size()/4, incx) < uintptr(n) {
+		panic("index out of bounds")
+	}
+
+	var res C.cublasStatus_t
+	x.WithPtr(func(xPtr unsafe.Pointer) {
+		if h.PointerMode() == Host {
+			res = C.cublasSasum(h.handle, safeIntToC(n), (*C.float)(xPtr),
+				safeIntToC(incx), (*C.float)(result.(*float32)))
+		} else {
+			result.(cuda.Buffer).WithPtr(func(resPtr unsafe.Pointer) {
+				res = C.cublasSasum(h.handle, safeIntToC(n), (*C.float)(xPtr),
+					safeIntToC(incx), (*C.float)(resPtr))
+			})
+		}
+	})
+
+	return newError("cublasSasum", res)
+}
+
+// Dasum is like Sasum, but for double-precision.
+//
+// The result argument's type depends on the pointer mode.
+// In the Host pointer mode, use *float64.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Dasum(n int, x cuda.Buffer, incx int, result interface{}) error {
+	if incx <= 0 {
+		panic("increment out of bounds")
+	} else if n < 0 {
+		panic("size out of bounds")
+	} else if stridedSize(x.Size()/8, incx) < uintptr(n) {
+		panic("index out of bounds")
+	}
+
+	var res C.cublasStatus_t
+	x.WithPtr(func(xPtr unsafe.Pointer) {
+		if h.PointerMode() == Host {
+			res = C.cublasDasum(h.handle, safeIntToC(n), (*C.double)(xPtr),
+				safeIntToC(incx), (*C.double)(result.(*float64)))
+		} else {
+			result.(cuda.Buffer).WithPtr(func(resPtr unsafe.Pointer) {
+				res = C.cublasDasum(h.handle, safeIntToC(n), (*C.double)(xPtr),
+					safeIntToC(incx), (*C.double)(resPtr))
+			})
+		}
+	})
+
+	return newError("cublasDasum", res)
 }
 
 func stridedSize(totalCount uintptr, inc int) uintptr {
