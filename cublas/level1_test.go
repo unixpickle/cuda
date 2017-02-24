@@ -136,21 +136,7 @@ func TestSscal(t *testing.T) {
 			{4, 4, 12, 4, -4, -3, 10},
 			{1, 1, 3, 1, -1, -0.75, 2.5},
 		}
-		for i, f := range actions {
-			if err := f(); err != nil {
-				t.Errorf("action %d: %s", i, err)
-				return nil
-			}
-			actual := make([]float32, 7)
-			if err := cuda.ReadBuffer(actual, buffers[0]); err != nil {
-				t.Error(err)
-				return nil
-			}
-			expected := expected[i]
-			if maxDelta32(actual, expected) > 1e-4 {
-				t.Errorf("action %d: expected %v but got %v", i, expected, actual)
-			}
-		}
+		runTestActions32(t, actions, expected, buffers[0])
 		return nil
 	})
 }
@@ -180,21 +166,105 @@ func TestDscal(t *testing.T) {
 			{4, 4, 12, 4, -4, -3, 10},
 			{1, 1, 3, 1, -1, -0.75, 2.5},
 		}
-		for i, f := range actions {
-			if err := f(); err != nil {
-				t.Errorf("action %d: %s", i, err)
-				return nil
-			}
-			actual := make([]float64, 7)
-			if err := cuda.ReadBuffer(actual, buffers[0]); err != nil {
-				t.Error(err)
-				return nil
-			}
-			expected := expected[i]
-			if maxDelta64(actual, expected) > 1e-4 {
-				t.Errorf("action %d: expected %v but got %v", i, expected, actual)
-			}
-		}
+		runTestActions64(t, actions, expected, buffers[0])
 		return nil
 	})
+}
+
+func TestSaxpy(t *testing.T) {
+	ctx, handle, buffers := setupTest(t, []float32{1, 2, 3, 4, -2, -3, 5},
+		[]float32{1, 0, -1, 0, 1, 2, -2, 3, 0}, []float32{3})
+	<-ctx.Run(func() error {
+		actions := []func() error{
+			func() error {
+				return handle.Saxpy(5, float32(2), buffers[0], 1, buffers[1], 2)
+			},
+			func() error {
+				scaler := float32(-2)
+				return handle.Saxpy(3, &scaler, buffers[0], 2, buffers[1], 3)
+			},
+			func() error {
+				if err := handle.SetPointerMode(Device); err != nil {
+					t.Error(err)
+					return nil
+				}
+				defer handle.SetPointerMode(Host)
+				return handle.Saxpy(2, buffers[2], buffers[0], 1, buffers[1], 1)
+			},
+		}
+		expected := [][]float32{
+			{3, 0, 3, 0, 7, 2, 6, 3, -4},
+			{1, 0, 3, -6, 7, 2, 10, 3, -4},
+			{4, 6, 3, -6, 7, 2, 10, 3, -4},
+		}
+		runTestActions32(t, actions, expected, buffers[1])
+		return nil
+	})
+}
+
+func TestDaxpy(t *testing.T) {
+	ctx, handle, buffers := setupTest(t, []float64{1, 2, 3, 4, -2, -3, 5},
+		[]float64{1, 0, -1, 0, 1, 2, -2, 3, 0}, []float64{3})
+	<-ctx.Run(func() error {
+		actions := []func() error{
+			func() error {
+				return handle.Daxpy(5, float64(2), buffers[0], 1, buffers[1], 2)
+			},
+			func() error {
+				scaler := float64(-2)
+				return handle.Daxpy(3, &scaler, buffers[0], 2, buffers[1], 3)
+			},
+			func() error {
+				if err := handle.SetPointerMode(Device); err != nil {
+					t.Error(err)
+					return nil
+				}
+				defer handle.SetPointerMode(Host)
+				return handle.Daxpy(2, buffers[2], buffers[0], 1, buffers[1], 1)
+			},
+		}
+		expected := [][]float64{
+			{3, 0, 3, 0, 7, 2, 6, 3, -4},
+			{1, 0, 3, -6, 7, 2, 10, 3, -4},
+			{4, 6, 3, -6, 7, 2, 10, 3, -4},
+		}
+		runTestActions64(t, actions, expected, buffers[1])
+		return nil
+	})
+}
+
+func runTestActions32(t *testing.T, fs []func() error, expected [][]float32, buf cuda.Buffer) {
+	for i, f := range fs {
+		if err := f(); err != nil {
+			t.Errorf("action %d: %s", i, err)
+			return
+		}
+		x := expected[i]
+		actual := make([]float32, len(x))
+		if err := cuda.ReadBuffer(actual, buf); err != nil {
+			t.Error(err)
+			return
+		}
+		if maxDelta32(actual, x) > 1e-4 {
+			t.Errorf("action %d: expected %v but got %v", i, x, actual)
+		}
+	}
+}
+
+func runTestActions64(t *testing.T, fs []func() error, expected [][]float64, buf cuda.Buffer) {
+	for i, f := range fs {
+		if err := f(); err != nil {
+			t.Errorf("action %d: %s", i, err)
+			return
+		}
+		x := expected[i]
+		actual := make([]float64, len(x))
+		if err := cuda.ReadBuffer(actual, buf); err != nil {
+			t.Error(err)
+			return
+		}
+		if maxDelta64(actual, x) > 1e-4 {
+			t.Errorf("action %d: expected %v but got %v", i, x, actual)
+		}
+	}
 }
