@@ -244,6 +244,30 @@ func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 //
 // This must be called inside the cuda.Context.
 func (h *Handle) Sasum(n int, x cuda.Buffer, incx int, result interface{}) error {
+	f := func(arg1 C.cublasHandle_t, arg2 C.int, arg3 *C.float, arg4 C.int,
+		arg5 *C.float) C.cublasStatus_t {
+		return C.cublasSasum(arg1, arg2, arg3, arg4, arg5)
+	}
+	return newError("cublasSasum", h.norm32(n, x, incx, result, f))
+}
+
+// Dasum is like Sasum, but for double-precision.
+//
+// The result argument's type depends on the pointer mode.
+// In the Host pointer mode, use *float64.
+// In the Device pointer mode, use cuda.Buffer.
+//
+// This must be called inside the cuda.Context.
+func (h *Handle) Dasum(n int, x cuda.Buffer, incx int, result interface{}) error {
+	f := func(arg1 C.cublasHandle_t, arg2 C.int, arg3 *C.double, arg4 C.int,
+		arg5 *C.double) C.cublasStatus_t {
+		return C.cublasDasum(arg1, arg2, arg3, arg4, arg5)
+	}
+	return newError("cublasDasum", h.norm64(n, x, incx, result, f))
+}
+
+func (h *Handle) norm32(n int, x cuda.Buffer, incx int, result interface{},
+	f func(C.cublasHandle_t, C.int, *C.float, C.int, *C.float) C.cublasStatus_t) C.cublasStatus_t {
 	if incx <= 0 {
 		panic("increment out of bounds")
 	} else if n < 0 {
@@ -255,27 +279,22 @@ func (h *Handle) Sasum(n int, x cuda.Buffer, incx int, result interface{}) error
 	var res C.cublasStatus_t
 	x.WithPtr(func(xPtr unsafe.Pointer) {
 		if h.PointerMode() == Host {
-			res = C.cublasSasum(h.handle, safeIntToC(n), (*C.float)(xPtr),
+			res = f(h.handle, safeIntToC(n), (*C.float)(xPtr),
 				safeIntToC(incx), (*C.float)(result.(*float32)))
 		} else {
 			result.(cuda.Buffer).WithPtr(func(resPtr unsafe.Pointer) {
-				res = C.cublasSasum(h.handle, safeIntToC(n), (*C.float)(xPtr),
+				res = f(h.handle, safeIntToC(n), (*C.float)(xPtr),
 					safeIntToC(incx), (*C.float)(resPtr))
 			})
 		}
 	})
 
-	return newError("cublasSasum", res)
+	return res
 }
 
-// Dasum is like Sasum, but for double-precision.
-//
-// The result argument's type depends on the pointer mode.
-// In the Host pointer mode, use *float64.
-// In the Device pointer mode, use cuda.Buffer.
-//
-// This must be called inside the cuda.Context.
-func (h *Handle) Dasum(n int, x cuda.Buffer, incx int, result interface{}) error {
+func (h *Handle) norm64(n int, x cuda.Buffer, incx int, result interface{},
+	f func(C.cublasHandle_t, C.int, *C.double, C.int,
+		*C.double) C.cublasStatus_t) C.cublasStatus_t {
 	if incx <= 0 {
 		panic("increment out of bounds")
 	} else if n < 0 {
@@ -297,7 +316,7 @@ func (h *Handle) Dasum(n int, x cuda.Buffer, incx int, result interface{}) error
 		}
 	})
 
-	return newError("cublasDasum", res)
+	return res
 }
 
 func stridedSize(totalCount uintptr, inc int) uintptr {
