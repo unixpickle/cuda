@@ -105,7 +105,7 @@ func GCAllocator(a Allocator, frac float64) Allocator {
 		if gogc := os.Getenv("GOGC"); gogc != "" {
 			val, err := strconv.ParseFloat(gogc, 64)
 			if err == nil {
-				frac = val
+				frac = val / 100
 			}
 		}
 	}
