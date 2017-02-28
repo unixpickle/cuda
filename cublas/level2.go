@@ -113,11 +113,6 @@ func (h *Handle) Dgemv(trans Operation, m, n int, alpha interface{},
 
 func checkGemv(trans Operation, m, n int, matA uintptr, lda int, x uintptr,
 	incx int, y uintptr, incy int) {
-	if m < 0 || n < 0 {
-		panic("dimension out of bounds")
-	} else if incx <= 0 || incy <= 0 {
-		panic("increment out of bounds")
-	}
 	if trans != NoTrans {
 		m, n = n, m
 	}

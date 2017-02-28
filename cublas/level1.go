@@ -20,9 +20,7 @@ import "C"
 // This must be called inside the cuda.Context.
 func (h *Handle) Sdot(n int, x cuda.Buffer, incx int, y cuda.Buffer, incy int,
 	result interface{}) error {
-	if incx <= 0 || incy <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/4, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -63,9 +61,7 @@ func (h *Handle) Sdot(n int, x cuda.Buffer, incx int, y cuda.Buffer, incy int,
 // This must be called inside the cuda.Context.
 func (h *Handle) Ddot(n int, x cuda.Buffer, incx int, y cuda.Buffer, incy int,
 	result interface{}) error {
-	if incx <= 0 || incy <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/8, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -105,9 +101,7 @@ func (h *Handle) Ddot(n int, x cuda.Buffer, incx int, y cuda.Buffer, incy int,
 //
 // This must be called inside the cuda.Context.
 func (h *Handle) Sscal(n int, alpha interface{}, x cuda.Buffer, incx int) error {
-	if incx <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/4, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -142,9 +136,7 @@ func (h *Handle) Sscal(n int, alpha interface{}, x cuda.Buffer, incx int) error 
 //
 // This must be called inside the cuda.Context.
 func (h *Handle) Dscal(n int, alpha interface{}, x cuda.Buffer, incx int) error {
-	if incx <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/8, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -180,9 +172,7 @@ func (h *Handle) Dscal(n int, alpha interface{}, x cuda.Buffer, incx int) error 
 // This must be called inside the cuda.Context.
 func (h *Handle) Saxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 	y cuda.Buffer, incy int) error {
-	if incx <= 0 || incy <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/4, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -224,9 +214,7 @@ func (h *Handle) Saxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 // This must be called inside the cuda.Context.
 func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 	y cuda.Buffer, incy int) error {
-	if incx <= 0 || incy <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/8, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -269,9 +257,7 @@ func (h *Handle) Daxpy(n int, alpha interface{}, x cuda.Buffer, incx int,
 //
 // This must be called inside the cuda.Context.
 func (h *Handle) Isamax(n int, x cuda.Buffer, incx int, result interface{}) error {
-	if incx <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/4, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -307,9 +293,7 @@ func (h *Handle) Isamax(n int, x cuda.Buffer, incx int, result interface{}) erro
 //
 // This must be called inside the cuda.Context.
 func (h *Handle) Idamax(n int, x cuda.Buffer, incx int, result interface{}) error {
-	if incx <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/8, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -401,9 +385,7 @@ func (h *Handle) Dnrm2(n int, x cuda.Buffer, incx int, result interface{}) error
 
 func (h *Handle) norm32(n int, x cuda.Buffer, incx int, result interface{},
 	f func(C.cublasHandle_t, C.int, *C.float, C.int, *C.float) C.cublasStatus_t) C.cublasStatus_t {
-	if incx <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/4, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -432,9 +414,7 @@ func (h *Handle) norm32(n int, x cuda.Buffer, incx int, result interface{},
 func (h *Handle) norm64(n int, x cuda.Buffer, incx int, result interface{},
 	f func(C.cublasHandle_t, C.int, *C.double, C.int,
 		*C.double) C.cublasStatus_t) C.cublasStatus_t {
-	if incx <= 0 {
-		panic("increment out of bounds")
-	} else if n < 0 {
+	if n < 0 {
 		panic("size out of bounds")
 	} else if stridedSize(x.Size()/8, incx) < uintptr(n) {
 		panic("index out of bounds")
@@ -461,6 +441,11 @@ func (h *Handle) norm64(n int, x cuda.Buffer, incx int, result interface{},
 }
 
 func stridedSize(totalCount uintptr, inc int) uintptr {
+	if inc == 0 {
+		panic("zero increment")
+	} else if inc < 0 {
+		inc = -inc
+	}
 	// Do this in such a way that we never risk overflow.
 	res := totalCount / uintptr(inc)
 	if totalCount%uintptr(inc) != 0 {

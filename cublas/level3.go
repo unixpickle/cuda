@@ -166,9 +166,6 @@ func alphaBeta64(alpha, beta interface{}, f func(alpha, beta *C.double)) {
 
 func checkGemm(transA, transB Operation, m, n, k int, A uintptr, lda int, B uintptr,
 	ldb int, C uintptr, ldc int) {
-	if m < 0 || n < 0 || k < 0 {
-		panic("dimension out of bounds")
-	}
 	checkMatrix(transA, lda, m, k, A)
 	checkMatrix(transB, ldb, k, n, B)
 	checkMatrix(NoTrans, ldc, m, n, C)
@@ -178,6 +175,9 @@ func checkGemm(transA, transB Operation, m, n, k int, A uintptr, lda int, B uint
 // given that op(A) is a-by-b and has leading dimension
 // lda.
 func checkMatrix(op Operation, lda, a, b int, size uintptr) {
+	if a < 0 || b < 0 {
+		panic("negative matrix dimension")
+	}
 	if op == NoTrans {
 		if lda < essentials.MaxInt(1, a) {
 			panic("leading dimension out of bounds")
