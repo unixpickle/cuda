@@ -174,6 +174,9 @@ func checkGemm(transA, transB Operation, m, n, k int, A uintptr, lda int, B uint
 	checkMatrix(NoTrans, ldc, m, n, C)
 }
 
+// checkMatrix ensures that op(A) fits in size elements,
+// given that op(A) is a-by-b and has leading dimension
+// lda.
 func checkMatrix(op Operation, lda, a, b int, size uintptr) {
 	if op == NoTrans {
 		if lda < essentials.MaxInt(1, a) {
