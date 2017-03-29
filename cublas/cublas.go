@@ -59,3 +59,12 @@ func (h *Handle) SetPointerMode(p PointerMode) error {
 	h.ptrMode = p
 	return nil
 }
+
+// SetStream tells the handle which stream to use for its
+// computations.
+//
+// this must be called inside the cuda.Context.
+func (h *Handle) SetStream(s *cuda.Stream) error {
+	res := C.cublasSetStream(h.handle, C.cudaStream_t(s.Pointer()))
+	return newError("cublasSetStream", res)
+}
