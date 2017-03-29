@@ -9,7 +9,6 @@ const size_t ptrSize = sizeof(void *);
 const size_t maxArgSize = 8;
 const CUjit_option * nullJitOptions = NULL;
 const void ** nullPtrPtr = NULL;
-const CUstream nullStream = NULL;
 */
 import "C"
 import (
@@ -85,9 +84,10 @@ func NewModule(ctx *Context, ptx string) (*Module, error) {
 //     Buffer
 //
 // To wait for the launched kernel to complete, use
-// the Synchronize() function.
+// Synchronize() or stream.Synchronize() if you specified
+// a non-nil stream.
 func (m *Module) Launch(kernel string, gridX, gridY, gridZ, blockX, blockY, blockZ,
-	sharedMem uint, args ...interface{}) error {
+	sharedMem uint, stream *Stream, args ...interface{}) error {
 	res := cleanKernelArguments(args, nil, func(rawArgs []unsafe.Pointer) error {
 		f, err := m.lookupKernel(kernel)
 		if err != nil {
@@ -95,7 +95,7 @@ func (m *Module) Launch(kernel string, gridX, gridY, gridZ, blockX, blockY, bloc
 		}
 		res := C.cuLaunchKernel(f, safeUintToC(gridX), safeUintToC(gridY),
 			safeUintToC(gridZ), safeUintToC(blockX), safeUintToC(blockY),
-			safeUintToC(blockZ), safeUintToC(sharedMem), C.nullStream,
+			safeUintToC(blockZ), safeUintToC(sharedMem), stream.cuStream(),
 			&rawArgs[0], C.nullPtrPtr)
 		return newErrorDriver("cuLaunchKernel", res)
 	})

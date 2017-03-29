@@ -13,32 +13,33 @@ func TestModule(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx, a := setupTest(t)
-	<-ctx.Run(func() error {
+
+	runTest := func(t *testing.T, stream *Stream) {
 		mod, err := NewModule(ctx, string(ptx))
 		if err != nil {
 			t.Error(err)
-			return nil
+			return
 		}
 
 		doubleBuf, err := AllocBuffer(a, 8*1550)
 		if err != nil {
 			t.Error(err)
-			return nil
+			return
 		}
 		floatBuf, err := AllocBuffer(a, 4*1550)
 		if err != nil {
 			t.Error(err)
-			return nil
+			return
 		}
 
 		floatBuf.WithPtr(func(ptr unsafe.Pointer) {
-			err = mod.Launch("my_fancy_kernel", 13, 1, 1, 128, 1, 1, 0, int(1550),
+			err = mod.Launch("my_fancy_kernel", 13, 1, 1, 128, 1, 1, 0, stream, int(1550),
 				float32(3.7), float64(2.5), int(-3), uint(5), doubleBuf, ptr)
 		})
 
 		if err != nil {
 			t.Error(err)
-			return nil
+			return
 		}
 
 		res32 := make([]float32, 1550)
@@ -46,11 +47,11 @@ func TestModule(t *testing.T) {
 
 		if err := ReadBuffer(res32, floatBuf); err != nil {
 			t.Error(err)
-			return nil
+			return
 		}
 		if err := ReadBuffer(res64, doubleBuf); err != nil {
 			t.Error(err)
-			return nil
+			return
 		}
 
 		expFloat := float32(-3 + 5 - 3.7)
@@ -68,6 +69,26 @@ func TestModule(t *testing.T) {
 				break
 			}
 		}
-		return nil
+		return
+	}
+
+	t.Run("NoStream", func(t *testing.T) {
+		<-ctx.Run(func() error {
+			runTest(t, nil)
+			return nil
+		})
+	})
+
+	t.Run("Stream", func(t *testing.T) {
+		<-ctx.Run(func() error {
+			stream, err := NewStream(false)
+			if err != nil {
+				t.Error(err)
+				return nil
+			}
+			defer stream.Close()
+			runTest(t, stream)
+			return nil
+		})
 	})
 }
