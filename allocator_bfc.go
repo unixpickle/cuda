@@ -18,7 +18,7 @@ const (
 	maxAllocators    = 5
 
 	allocAlignment = 32
-	allocHeadroom  = 1 << 25
+	allocHeadroom  = 1 << 22
 )
 
 type bfcAllocator struct {
@@ -41,19 +41,12 @@ type bfcAllocator struct {
 // This should be called from a Context.
 func BFCAllocator(ctx *Context, maxSize uintptr) (Allocator, error) {
 	if maxSize == 0 {
-		var free, total C.size_t
-		err := newErrorRuntime("cudaGetMemInfo", C.cudaMemGetInfo(&free, &total))
+		var err error
+		maxSize, err = maxBFCMemory()
 		if err != nil {
 			return nil, err
 		}
-		maxSize = uintptr(free)
-		maxSize -= allocHeadroom
 	}
-
-	// No reason to reserve a misaligned amount of bytes.
-	// Doing so would probably cause fragmentation, knowing
-	// how bad cudaMalloc() is with fragmentation.
-	maxSize = (maxSize / allocAlignment) * allocAlignment
 
 	// The allocator size must fit in an int.
 	for int(maxSize) < 0 || uintptr(int(maxSize)) != maxSize {
@@ -62,6 +55,11 @@ func BFCAllocator(ctx *Context, maxSize uintptr) (Allocator, error) {
 
 	var allocs []*memalloc.MemAllocator
 	for len(allocs) < maxAllocators && maxSize >= minAllocatorSize {
+		// No reason to reserve a misaligned amount of bytes.
+		// Doing so would probably cause fragmentation, knowing
+		// how bad cudaMalloc() is with fragmentation.
+		maxSize = (maxSize / allocAlignment) * allocAlignment
+
 		var region unsafe.Pointer
 		err := newErrorRuntime("cudaMalloc", C.cudaMalloc(&region, C.size_t(maxSize)))
 		if err != nil {
@@ -73,6 +71,13 @@ func BFCAllocator(ctx *Context, maxSize uintptr) (Allocator, error) {
 			Size:      int(maxSize),
 			Allocator: memalloc.NewBFC(int(maxSize), allocAlignment),
 		})
+
+		newMax, err := maxBFCMemory()
+		if err != nil {
+			return nil, err
+		} else if newMax < maxSize {
+			maxSize = newMax
+		}
 	}
 	if len(allocs) == 0 {
 		return nil, errors.New("BFC init: not enough free memory")
@@ -117,4 +122,17 @@ func (b *bfcAllocator) Free(ptr unsafe.Pointer, size uintptr) {
 		}
 	}
 	panic("invalid pointer was freed")
+}
+
+func maxBFCMemory() (uintptr, error) {
+	var free, total C.size_t
+	err := newErrorRuntime("cudaGetMemInfo", C.cudaMemGetInfo(&free, &total))
+	if err != nil {
+		return 0, err
+	}
+	res := uintptr(free)
+	if res < allocHeadroom {
+		return 0, nil
+	}
+	return res - allocHeadroom, nil
 }
