@@ -4,9 +4,13 @@ package cuda
 #include <cuda.h>
 */
 import "C"
-import "runtime"
+import (
+	"os"
+	"runtime"
+	"strconv"
+)
 
-const defaultContextBuffer = 10
+const defaultContextBuffer = 20
 
 func init() {
 	if err := newErrorDriver("cuInit", C.cuInit(0)); err != nil {
@@ -25,15 +29,24 @@ type Context struct {
 //
 // The bufferSize is the maximum number of asynchronous
 // calls that can be queued up at once.
-// A bufferSize of -1 is replaced with a reasonable
-// default.
 // A larger buffer size means that Run() is less likely
 // to block, all else equal.
+//
+// If bufferSize is -1, then the CUDA_CTX_BUFFER
+// environment variable is used.
+// If bufferSize is -1 and CUDA_CTX_BUFFER is not set, a
+// reasonable default is used.
 func NewContext(d *Device, bufferSize int) (*Context, error) {
 	if bufferSize < -1 {
 		panic("buffer size out of range")
 	} else if bufferSize == -1 {
 		bufferSize = defaultContextBuffer
+		if bs := os.Getenv("CUDA_CTX_BUFFER"); bs != "" {
+			parsed, err := strconv.Atoi(bs)
+			if err == nil && parsed >= 0 {
+				bufferSize = parsed
+			}
+		}
 	}
 	msgs := make(chan *contextMsg, bufferSize)
 	go contextLoop(msgs)
