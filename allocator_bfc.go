@@ -7,7 +7,9 @@ package cuda
 import "C"
 import (
 	"errors"
+	"os"
 	"runtime"
+	"strconv"
 	"unsafe"
 
 	"github.com/unixpickle/memalloc"
@@ -125,14 +127,22 @@ func (b *bfcAllocator) Free(ptr unsafe.Pointer, size uintptr) {
 }
 
 func maxBFCMemory() (uintptr, error) {
+	headroom := uintptr(allocHeadroom)
+	if roomStr := os.Getenv("CUDA_BFC_HEADROOM"); roomStr != "" {
+		val, err := strconv.ParseUint(roomStr, 10, 64)
+		if err == nil {
+			headroom = uintptr(val)
+		}
+	}
+
 	var free, total C.size_t
 	err := newErrorRuntime("cudaGetMemInfo", C.cudaMemGetInfo(&free, &total))
 	if err != nil {
 		return 0, err
 	}
 	res := uintptr(free)
-	if res < allocHeadroom {
+	if res < headroom {
 		return 0, nil
 	}
-	return res - allocHeadroom, nil
+	return res - headroom, nil
 }
