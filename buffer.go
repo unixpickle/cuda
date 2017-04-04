@@ -114,6 +114,18 @@ func (s *slice) WithPtr(f func(p unsafe.Pointer)) {
 	})
 }
 
+// Overlap checks if two buffers overlap in memory.
+func Overlap(b1, b2 Buffer) bool {
+	var overlap bool
+	b1.WithPtr(func(ptr1 unsafe.Pointer) {
+		b2.WithPtr(func(ptr2 unsafe.Pointer) {
+			overlap = uintptr(ptr1) < uintptr(ptr2)+uintptr(b2.Size()) &&
+				uintptr(ptr2) < uintptr(ptr1)+uintptr(b1.Size())
+		})
+	})
+	return overlap
+}
+
 // ClearBuffer writes zeros over the contents of a Buffer.
 // It must be called from the correct Context.
 func ClearBuffer(b Buffer) error {

@@ -101,6 +101,13 @@ func TestSlice(t *testing.T) {
 			t.Errorf("expected %v but got %v", expected, actual)
 		}
 
+		if !Overlap(Slice(buf1, 0, 5), Slice(buf1, 3, 5)) {
+			t.Error("should overlap")
+		}
+		if Overlap(Slice(buf1, 0, 5), Slice(buf1, 5, 10)) {
+			t.Error("should not overlap")
+		}
+
 		return nil
 	})
 }
