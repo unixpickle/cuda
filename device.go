@@ -5,6 +5,8 @@ package cuda
 */
 import "C"
 
+import "unsafe"
+
 // Device contains a unique ID for a CUDA device.
 type Device struct {
 	id C.CUdevice
@@ -29,4 +31,25 @@ func AllDevices() ([]*Device, error) {
 		res = append(res, &Device{id: dev})
 	}
 	return res, nil
+}
+
+// Name gets the device's identifier string.
+func (d *Device) Name() (string, error) {
+	res := (*C.char)(C.malloc(0x100))
+	defer C.free(unsafe.Pointer(res))
+	cuRes := C.cuDeviceGetName(res, 0xff, d.id)
+	if err := newErrorDriver("cuDeviceGetName", cuRes); err != nil {
+		return "", err
+	}
+	return C.GoString(res), nil
+}
+
+// TotalMem gets the device's total memory.
+func (d *Device) TotalMem() (uint64, error) {
+	var res C.size_t
+	cuRes := C.cuDeviceTotalMem(&res, d.id)
+	if err := newErrorDriver("cuDeviceTotalMem", cuRes); err != nil {
+		return 0, err
+	}
+	return uint64(res), nil
 }
