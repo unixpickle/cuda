@@ -135,8 +135,7 @@ func maxBFCMemory() (uintptr, error) {
 		}
 	}
 
-	var free, total C.size_t
-	err := newErrorRuntime("cudaGetMemInfo", C.cudaMemGetInfo(&free, &total))
+	free, _, err := MemInfo()
 	if err != nil {
 		return 0, err
 	}

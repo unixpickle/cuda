@@ -48,6 +48,17 @@ type Allocator interface {
 	Free(ptr unsafe.Pointer, size uintptr)
 }
 
+// MemInfo gets the free and total amount of memory
+// available for allocation on the current device.
+//
+// This must be called in a Context.
+func MemInfo() (free, total uint64, err error) {
+	var cFree, cTotal C.size_t
+	err = newErrorRuntime("cudaMemGetInfo", C.cudaMemGetInfo(&cFree, &cTotal))
+	free, total = uint64(cFree), uint64(cTotal)
+	return
+}
+
 // A nativeAllocator allocates directly using CUDA.
 type nativeAllocator struct {
 	ctx *Context
