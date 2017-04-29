@@ -9,6 +9,14 @@ const CUstream nullStream = NULL;
 import "C"
 import "unsafe"
 
+// Synchronize waits for asynchronous operations to
+// complete.
+//
+// This should be called in a Context.
+func Synchronize() error {
+	return newErrorDriver("cuCtxSynchronize", C.cuCtxSynchronize())
+}
+
 // A Stream manages a pipeline of CUDA operations.
 // Streams can be employed to achieve parallelism.
 type Stream struct {

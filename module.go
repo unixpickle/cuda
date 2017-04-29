@@ -16,14 +16,6 @@ import (
 	"unsafe"
 )
 
-// Synchronize waits for asynchronous operations to
-// complete.
-//
-// This should be called in a Context.
-func Synchronize() error {
-	return newErrorDriver("cuCtxSynchronize", C.cuCtxSynchronize())
-}
-
 // A Module manages a set of compiled kernels.
 type Module struct {
 	module C.CUmodule
