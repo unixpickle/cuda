@@ -40,6 +40,10 @@ type bfcAllocator struct {
 // If it is 0, the allocator may claim nearly all of the
 // available device memory.
 //
+// If the CUDA_BFC_HEADROOM environment variable is set,
+// it is used as the minimum number of bytes to leave
+// free.
+//
 // This should be called from a Context.
 func BFCAllocator(ctx *Context, maxSize uintptr) (Allocator, error) {
 	if maxSize == 0 {
