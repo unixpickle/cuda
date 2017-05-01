@@ -4,7 +4,7 @@ package cuda
 #include <cuda.h>
 #include <assert.h>
 
-CUdevice_attribute devattr_for_idx(int i) {
+int devattr_for_idx(int i, CUdevice_attribute * res) {
 	CUdevice_attribute attrs[] = {
 		CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK,
 		CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X,
@@ -95,6 +95,7 @@ CUdevice_attribute devattr_for_idx(int i) {
 		CU_DEVICE_ATTRIBUTE_MAX_REGISTERS_PER_MULTIPROCESSOR,
 		CU_DEVICE_ATTRIBUTE_MANAGED_MEMORY,
 		CU_DEVICE_ATTRIBUTE_MULTI_GPU_BOARD,
+#ifdef CU_DEVICE_ATTRIBUTE_HOST_NATIVE_ATOMIC_SUPPORTED
 		CU_DEVICE_ATTRIBUTE_MULTI_GPU_BOARD_GROUP_ID,
 		CU_DEVICE_ATTRIBUTE_HOST_NATIVE_ATOMIC_SUPPORTED,
 		CU_DEVICE_ATTRIBUTE_SINGLE_TO_DOUBLE_PRECISION_PERF_RATIO,
@@ -102,23 +103,38 @@ CUdevice_attribute devattr_for_idx(int i) {
 		CU_DEVICE_ATTRIBUTE_CONCURRENT_MANAGED_ACCESS,
 		CU_DEVICE_ATTRIBUTE_COMPUTE_PREEMPTION_SUPPORTED,
 		CU_DEVICE_ATTRIBUTE_CAN_USE_HOST_POINTER_FOR_REGISTERED_MEM
+#else
+		CU_DEVICE_ATTRIBUTE_MULTI_GPU_BOARD_GROUP_ID
+#endif
 	};
-	assert(i >= 0 && i < sizeof(attrs)/sizeof(CUdevice_attribute));
-	return attrs[i];
+	if (i <= 0 || i >= sizeof(attrs)/sizeof(CUdevice_attribute)) {
+		return 1;
+	}
+	*res = attrs[i];
+	return 0;
 }
 */
 import "C"
 
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 // DevAttr is a CUDA device attribute.
 type DevAttr int
 
-func (d DevAttr) cValue() C.CUdevice_attribute {
+func (d DevAttr) cValue() (C.CUdevice_attribute, error) {
 	if d < 0 || d > DevAttrCanUseHostPointerForRegisteredMem {
 		panic("invalid DevAttr")
 	}
-	return C.devattr_for_idx(C.int(d))
+	var res C.CUdevice_attribute
+	status := C.devattr_for_idx(C.int(d), &res)
+	if status == 0 {
+		return res, nil
+	} else {
+		return 0, fmt.Errorf("unsupported device attribute: %d", int(d))
+	}
 }
 
 // All supported device attributes.
@@ -265,7 +281,11 @@ func (d *Device) Name() (string, error) {
 // This needn't be called from a Context.
 func (d *Device) Attr(attr DevAttr) (int, error) {
 	var res C.int
-	cuRes := C.cuDeviceGetAttribute(&res, attr.cValue(), d.id)
+	cAttr, err := attr.cValue()
+	if err != nil {
+		return 0, err
+	}
+	cuRes := C.cuDeviceGetAttribute(&res, cAttr, d.id)
 	if err := newErrorDriver("cuDeviceGetAttribute", cuRes); err != nil {
 		return 0, err
 	}
