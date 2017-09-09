@@ -44,8 +44,18 @@ type bfcAllocator struct {
 // it is used as the minimum number of bytes to leave
 // free.
 //
+// If the CUDA_BFC_MAX environment variable is set, it is
+// used as an upper memory bound (in addition to maxSize).
+//
 // This should be called from a Context.
 func BFCAllocator(ctx *Context, maxSize uintptr) (Allocator, error) {
+	if maxSizeEnv := os.Getenv("CUDA_BFC_MAX"); maxSizeEnv != "" {
+		size, err := strconv.ParseUint(maxSizeEnv, 10, 64)
+		if err == nil && (maxSize == 0 || uintptr(size) < maxSize) {
+			maxSize = uintptr(size)
+		}
+	}
+
 	if maxSize == 0 {
 		var err error
 		maxSize, err = maxBFCMemory()
